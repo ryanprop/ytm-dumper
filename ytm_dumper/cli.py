@@ -48,7 +48,7 @@ def construct_filename(video: database_parser.Video):
         filename += video.title
     return filename
 
-def find_filename(filename: str, ext: str, data: bytes, args: argparse.Namespace):
+def find_filename(filename: str, ext: str, get_data_fn: callable, args: argparse.Namespace):
     while True:
         try:
             full_filename = os.path.join(args.dest, filename + ext)
@@ -64,7 +64,7 @@ def find_filename(filename: str, ext: str, data: bytes, args: argparse.Namespace
                 # Shorten the filename and replace the end with a hash of the file contents
                 if ext.startswith('.'):
                     # any stable hash-function will do
-                    ext = base64.urlsafe_b64encode(hashlib.sha1(data).digest()[:3]).decode('ascii') + ext
+                    ext = base64.urlsafe_b64encode(hashlib.sha1(get_data_fn()).digest()[:3]).decode('ascii') + ext
                     filename = filename[:-5] + '-'
                 else:
                     filename = filename[:-2] + '-'
@@ -90,11 +90,16 @@ def process_video(video: database_parser.Video,
         return
 
     ext = '.' + MIME_TO_EXT.search(video.mime).group('ext') if MIME_TO_EXT.search(video.mime) else ''
-    data = download_and_decrypt_video(video, adb_device, cache_idx, key, args.streamdir)
-    f, full_filename = find_filename(filename, ext, data, args)
+    # Decrypt the file only if we actually need it.
+    data = []
+    def get_data_fn():
+        if not data:
+            data.append(download_and_decrypt_video(video, adb_device, cache_idx, key, args.streamdir))
+        return data[0]
+    f, full_filename = find_filename(filename, ext, get_data_fn, args)
     if not f:
         return
-    f.write(data)
+    f.write(get_data_fn())
     f.close()
 
     if args.metadata:
