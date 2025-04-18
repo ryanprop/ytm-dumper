@@ -17,7 +17,7 @@ These steps are generally needed only once to set up the environment.
 1.  **Initialize the `blackboxprotobuf` submodule:** \
     This dependency is used for decoding protocol buffer messages found in the YouTube Music databases.
     ```sh
-    git submodule init blackboxprotobuf
+    git submodule init submodules/blackboxprotobuf
     git submodule update
     ```
 
